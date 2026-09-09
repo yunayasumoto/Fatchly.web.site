@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fetchly — 検索デモ</title>
+<style>
+  :root{
+    --blue:#1a0dab;
+    --green:#006621;
+    --text:#202124;
+    --gray:#5f6368;
+    --border:#ebebeb;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: arial, "Hiragino Sans", "Meiryo", sans-serif;
+    color:var(--text);
+    background:#fff;
+  }
+  a{text-decoration:none;color:inherit;}
+
+  /* ---------- Home (centered) state ---------- */
+  #home{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:0 20px;
+  }
+  .logo{
+    font-size:64px;
+    font-weight:700;
+    letter-spacing:-1px;
+    margin-bottom:28px;
+    user-select:none;
+  }
+  .logo span:nth-child(1){color:#4285F4;}
+  .logo span:nth-child(2){color:#EA4335;}
+  .logo span:nth-child(3){color:#FBBC05;}
+  .logo span:nth-child(4){color:#4285F4;}
+  .logo span:nth-child(5){color:#34A853;}
+  .logo span:nth-child(6){color:#EA4335;}
+  .logo span:nth-child(7){color:#FBBC05;}
+
+  .search-box{
+    width:100%;
+    max-width:560px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border:1px solid #dfe1e5;
+    border-radius:24px;
+    padding:11px 18px;
+    transition:box-shadow .15s ease, border-color .15s ease;
+  }
+  .search-box:hover, .search-box:focus-within{
+    box-shadow:0 1px 6px rgba(32,33,36,0.28);
+    border-color:rgba(223,225,229,0);
+  }
+  .search-box svg{flex:none;color:var(--gray);}
+  .search-box input{
+    flex:1;
+    border:none;
+    outline:none;
+    font-size:16px;
+    color:var(--text);
+    background:transparent;
+  }
+
+  .btn-row{
+    margin-top:28px;
+    display:flex;
+    gap:12px;
+  }
+  .btn{
+    background:#f8f9fa;
+    border:1px solid #f8f9fa;
+    border-radius:4px;
+    color:#3c4043;
+    font-size:14px;
+    padding:9px 16px;
+    cursor:pointer;
+  }
+  .btn:hover{
+    border-color:#dadce0;
+    box-shadow:0 1px 1px rgba(0,0,0,0.06);
+  }
+
+  .home-footer{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:#f2f2f2;
+    border-top:1px solid var(--border);
+    padding:14px 26px;
+    font-size:13px;
+    color:var(--gray);
+    display:flex;
+    justify-content:space-between;
+  }
+
+  /* ---------- Results state ---------- */
+  #results-page{
+    display:none;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:34px;
+    padding:18px 26px 14px;
+    border-bottom:1px solid var(--border);
+  }
+  .topbar .logo-sm{
+    font-size:24px;
+    font-weight:700;
+    letter-spacing:-0.5px;
+    flex:none;
+  }
+  .topbar .logo-sm span:nth-child(1){color:#4285F4;}
+  .topbar .logo-sm span:nth-child(2){color:#EA4335;}
+  .topbar .logo-sm span:nth-child(3){color:#FBBC05;}
+  .topbar .logo-sm span:nth-child(4){color:#4285F4;}
+  .topbar .logo-sm span:nth-child(5){color:#34A853;}
+  .topbar .logo-sm span:nth-child(6){color:#EA4335;}
+  .topbar .logo-sm span:nth-child(7){color:#FBBC05;}
+
+  .topbar .search-box{max-width:560px; padding:9px 16px;}
+  .topbar .search-box input{font-size:15px;}
+
+  .stats{
+    padding:14px 26px 6px;
+    font-size:13px;
+    color:var(--gray);
+    max-width:640px;
+  }
+
+  .result-list{
+    padding:0 26px;
+    max-width:640px;
+  }
+  .result{
+    padding:16px 0;
+  }
+  .result .url{
+    font-size:13px;
+    color:var(--green);
+    margin-bottom:2px;
+  }
+  .result .r-title{
+    font-size:19px;
+    color:var(--blue);
+    margin-bottom:4px;
+    display:inline-block;
+    cursor:pointer;
+    -webkit-tap-highlight-color:rgba(26,13,171,0.15);
+    padding:6px 0;
+    margin:-6px 0 -2px;
+  }
+  .result .r-title:hover{text-decoration:underline;}
+  .result .r-title:active{text-decoration:underline;}
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%) translateY(20px);
+    background:#202124;
+    color:#fff;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:6px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:10;
+    white-space:nowrap;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+  .result .snippet{
+    font-size:14px;
+    line-height:1.55;
+    color:#4d5156;
+    max-width:600px;
+  }
+  .result mark{
+    background:none;
+    font-weight:700;
+    color:inherit;
+  }
+
+  .empty{
+    padding:60px 26px;
+    color:var(--text);
+    font-size:15px;
+  }
+  .empty b{font-weight:700;}
+  .empty ul{color:var(--gray); font-size:14px; margin-top:14px;}
+
+  @media (max-width:480px){
+    .logo{font-size:46px;}
+    .topbar{gap:16px; padding:14px 14px;}
+    .result-list, .stats{padding-left:14px; padding-right:14px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home">
+  <div class="logo"><span>F</span><span>e</span><span>t</span><span>c</span><span>h</span><span>l</span><span>y</span></div>
+  <form id="homeForm" style="width:100%; max-width:560px;">
+    <div class="search-box">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="homeInput" autocomplete="off" autofocus>
+    </div>
+    <div class="btn-row" style="justify-content:center;">
+      <button type="submit" class="btn">Fetchly 検索</button>
+      <button type="button" class="btn" id="luckyBtn">ラッキー検索</button>
+    </div>
+  </form>
+  <div class="home-footer">
+    <span>Japan</span>
+    <span>ダミーデータのみのデモです — 実際のウェブ検索は行いません</span>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results-page">
+  <div class="topbar">
+    <div class="logo-sm"><span>F</span><span>e</span><span>t</span><span>c</span><span>h</span><span>l</span><span>y</span></div>
+    <form id="resultsForm" style="flex:1; display:flex;">
+      <div class="search-box" style="flex:1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="resultsInput" autocomplete="off">
+      </div>
+    </form>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="result-list" id="resultList"></div>
+</div>
+
+<script>
+const DATA = [
+  {t:"発酵の科学：パンがふくらむ仕組み", u:"kitchenlab.example/fermentation-bread", s:"酵母が糖を分解して二酸化炭素とアルコールを作り出す過程を、家庭のオーブンで再現しながら解説します。"},
+  {t:"多摩川源流を歩く：三日間の記録", u:"trailnotes.example/tamagawa-source", s:"奥多摩の水源地帯から河口までを歩いた記録。標高差と植生の変化を写真とともに振り返ります。"},
+  {t:"中古レコードの見分け方入門", u:"waxandgroove.example/vinyl-grading", s:"盤面の傷、レーベルの刷り、内袋の状態からプレスの年代を推測する基本的なチェックポイント。"},
+  {t:"睡眠サイクルと生産性の関係", u:"sleepresearch.example/cycles-productivity", s:"90分周期のノンレム・レム睡眠が、翌日の集中力にどう影響するかをまとめた研究レビュー。"},
+  {t:"自転車の変速機、仕組みからメンテナンスまで", u:"twowheeljournal.example/derailleur-basics", s:"ディレイラーの調整方法と、チェーンの伸びを見極めるための簡単な測定手順を紹介します。"},
+  {t:"古い活版印刷機を修理する", u:"printshopdiary.example/restoring-letterpress", s:"1920年代製の卓上印刷機を分解し、ローラーとインキ壺を一から作り直した記録。"},
+  {t:"苔テラリウムの作り方と管理", u:"greenjar.example/moss-terrarium-guide", s:"密閉容器の中で苔が自立した生態系を保つ理由と、水やりの頻度についての実践的なコツ。"},
+  {t:"地図から消えた駅を訪ねて", u:"forgottenrails.example/abandoned-stations", s:"廃線跡に残るホームと標識を巡り、路線が使われていた頃の時刻表を照らし合わせます。"},
+  {t:"味噌の熟成期間による風味の違い", u:"kitchenlab.example/miso-aging-flavor", s:"半年熟成と一年熟成の味噌を並べて比較し、塩味と旨味のバランスがどう変化するかを検証。"},
+  {t:"手漉き和紙の繊維構造", u:"papercraftnotes.example/washi-fiber-structure", s:"楮の繊維がどのように絡み合って強度を生むのか、顕微鏡写真を交えて解説します。"},
+  {t:"夜間飛行と星座の見え方", u:"skywatcher.example/night-flight-constellations", s:"高高度から見る星の瞬きが地上と異なる理由、そして機内から観測しやすい星座の一覧。"},
+  {t:"古書店主が語る、値付けの裏側", u:"bookbindery.example/secondhand-pricing", s:"初版かどうかだけでなく、蔵書印や書き込みが査定額に与える影響について。"},
+  {t:"発酵茶と非発酵茶の違いを飲み比べる", u:"teahouse.example/fermented-vs-green", s:"プーアル茶と緑茶を同じ茶葉量で淹れ、香りと渋みの出方を比較したテイスティング記録。"},
+  {t:"手漕ぎボートで川を上る", u:"riverlog.example/rowing-upstream", s:"流れの速い区間での漕ぎ方と、水位によって変わる航路の選び方についてのメモ。"},
+  {t:"古い腕時計のゼンマイを巻く頻度", u:"timepiece.example/mainspring-winding", s:"手巻き式ムーブメントを長持ちさせるための、巻き上げ回数と保管姿勢についての目安。"},
+  {t:"石窯の温度管理と余熱の使い方", u:"kitchenlab.example/wood-oven-heat", s:"薪の量と焼成順序によって窯内の温度がどう推移するかを、実測データとともに紹介。"},
+  {t:"庭のコンポストが臭わない作り方", u:"greenjar.example/odorless-compost", s:"炭素sourceと窒素sourceの比率を調整するだけで、家庭用コンポストの臭いは大きく減ります。"},
+  {t:"活字の版面から読む印刷所の癖", u:"printshopdiary.example/typeface-tells", s:"同じ書体でも版元によって字間や太さに微妙な差があり、それが印刷所の特定につながることも。"},
+  {t:"山小屋の水源を維持する仕事", u:"trailnotes.example/mountain-hut-water", s:"標高2000mの山小屋で、雪解け水を安全な飲料水に変えるまでの濾過工程を追いました。"},
+  {t:"古地図の縮尺表記が語ること", u:"cartographyclub.example/scale-notation-history", s:"時代によって異なる縮尺の書き方から、地図がどのような目的で作られたかを読み解きます。"},
+  {t:"手編みセーターの目数計算", u:"woolandneedle.example/gauge-calculation", s:"ゲージスワッチから実際のサイズを割り出すための計算式と、よくある誤差の原因。"},
+  {t:"星空の下でのキャンプ飯", u:"campfirekitchen.example/stargazing-meals", s:"火力調整が難しい焚き火でも失敗しにくい、下ごしらえ中心のキャンプ料理レシピ集。"},
+  {t:"古書の虫食い跡を修復する", u:"bookbindery.example/insect-damage-repair", s:"和紙と小麦粉糊を使った伝統的な補修方法と、現代の保存科学との違いについて。"},
+  {t:"雨音の録音と環境音の編集", u:"fieldrecording.example/rain-ambience-editing", s:"屋根の材質によって雨音の周波数特性が変わることを、実際の録音を比較しながら検証。"},
+  {t:"味の記憶はどこに保存されるのか", u:"sleepresearch.example/flavor-memory-brain", s:"嗅覚と記憶を司る脳領域の近さが、香りによる想起の強さに関係しているという仮説。"},
+  {t:"廃校を利用した木工房の一日", u:"printshopdiary.example/former-school-workshop", s:"体育館だった場所に木材を運び込み、乾燥から加工までを行う工房の日常を追った記録。"},
+  {t:"渡り鳥のルートは誰が決めるのか", u:"skywatcher.example/migration-route-origins", s:"若い個体が初めての渡りをどうやって成功させるのか、経路学習の仮説をまとめました。"},
+  {t:"古い自転車のフレーム塗装を剥がす", u:"twowheeljournal.example/frame-strip-refinish", s:"重ね塗りされた塗膜を層ごとに剥がしていくと、その自転車の来歴が見えてくることがあります。"},
+  {t:"手紙の便箋に使われた透かし技術", u:"papercraftnotes.example/letter-watermark-history", s:"光にかざすと浮かぶ模様がどのように紙に埋め込まれるのか、簡単な仕組みを紹介します。"},
+  {t:"低山ハイキングで迷わないための地図読み", u:"trailnotes.example/low-mountain-navigation", s:"標高が低い山ほど分岐が多く迷いやすいという逆説について、実例を挙げて説明します。"},
+  {t:"発酵バターと非発酵バターの製法差", u:"kitchenlab.example/cultured-vs-sweet-butter", s:"クリームに乳酸菌を加えるかどうかで、風味だけでなく保存性にも違いが生まれます。"},
+  {t:"古いラジオの真空管を交換する", u:"vintageelectronics.example/vacuum-tube-swap", s:"型番の異なる真空管でも動作する場合があるものの、音質には明確な差が出ることを確認しました。"},
+  {t:"不妊治療のはじめかた：まず何から相談する?", u:"familyclinic.example/where-to-start", s:"婦人科と生殖医療専門のクリニック、どちらに最初に相談すればよいかを、検査の流れに沿って整理しました。"},
+  {t:"不妊治療の助成金と公的支援制度まとめ", u:"lifestepnotes.example/public-support-summary", s:"自治体ごとに異なる助成の対象範囲や申請時期について、これまでに公開されている情報を整理しています。"},
+  {t:"通院と仕事の両立で工夫していること", u:"workingdiary.example/clinic-and-work-balance", s:"通院回数が増える時期に、周囲への伝え方やスケジュール調整をどう工夫したかを振り返った体験記です。"},
+  {t:"不妊治療にかかる期間の目安を考える", u:"familyclinic.example/typical-timeline", s:"検査から治療方針の決定まで、一般的にどのくらいの期間がかかりやすいかを段階ごとに解説します。"},
+  {t:"パートナーと治療方針を話し合うときのこと", u:"lifestepnotes.example/talking-with-partner", s:"意見が食い違いやすい場面と、どう歩み寄って方針を決めていったかについてのふたり分の記録です。"},
+  {t:"不妊治療のクリニック選びで確認したい点", u:"familyclinic.example/choosing-a-clinic", s:"通いやすさや診療方針の違いなど、クリニックを比較する際に見ておくとよさそうな項目をまとめました。"},
+  {t:"検査結果を記録するノートを作った話", u:"lifestepnotes.example/keeping-a-records-notebook", s:"通院のたびに増えていく数値やメモを、どう整理すれば見返しやすいかを試行錯誤した記録です。"},
+  {t:"不妊治療と食生活、変えたこと変えなかったこと", u:"familyclinic.example/diet-changes-reflection", s:"見直した習慣と、無理に変えずに続けた習慣について、当時の考えをそのまま振り返っています。"},
+  {t:"周囲への伝え方、伝えなかった選択", u:"workingdiary.example/who-to-tell", s:"職場や友人にどこまで話すかを決めるまでに、迷った期間とその理由を書き残しています。"},
+  {t:"不妊治療にまつわる費用の内訳を振り返る", u:"lifestepnotes.example/cost-breakdown-reflection", s:"検査・通院・処方それぞれの段階で、費用感がどう変わっていったかを時系列でまとめました。"},
+  {t:"通院スケジュールとカレンダー管理の工夫", u:"workingdiary.example/scheduling-around-appointments", s:"急な予約変更が入りやすい時期に、仕事の予定とどう調整していたかについての実践的なメモ。"},
+  {t:"不妊治療を経験した人たちの体験談を読んで", u:"familyclinic.example/reading-others-stories", s:"同じ状況の人の記録を読むことが、当時の自分にとってどんな支えになったかを振り返ります。"},
+  {t:"治療を一時休止するという選択について", u:"lifestepnotes.example/taking-a-pause", s:"続けることだけが選択肢ではないと感じた時期の心境と、そのときの判断について書いています。"},
+  {t:"不妊治療、はじめて聞いた専門用語をまとめてみた", u:"familyclinic.example/glossary-for-beginners", s:"通院初日に説明された言葉のうち、あとから調べ直したものだけを自分用にリスト化しました。"},
+  {t:"転院を考えたときに整理したこと", u:"familyclinic.example/considering-a-transfer", s:"今のクリニックを続けるか変えるか、迷ったときに自分なりに立てた判断基準についての記録。"},
+  {t:"不妊治療とストレスの付き合い方を振り返る", u:"lifestepnotes.example/coping-with-stress", s:"気持ちが落ち込みやすかった時期に、どんな習慣が支えになったかを個人的な視点でまとめています。"},
+  {t:"夫婦それぞれの検査で分かったこと", u:"workingdiary.example/both-partners-testing", s:"どちらか一方だけでなく、ふたりで検査を受けることになった経緯とその時の心境について。"},
+  {t:"不妊治療の情報収集、どこから始めたか", u:"familyclinic.example/starting-to-research", s:"最初に何を調べればよいか分からなかった頃、実際に参考にした情報の探し方を振り返ります。"},
+  {t:"待合室で感じたこと、聞かれて困った質問", u:"lifestepnotes.example/waiting-room-thoughts", s:"通院先で交わされる会話や、周囲から受ける質問にどう向き合っていたかについての雑感です。"},
+  {t:"不妊治療を終えるタイミングをどう決めたか", u:"lifestepnotes.example/deciding-when-to-stop", s:"続けるか区切りをつけるか、ふたりで話し合いを重ねてたどり着いた結論までの過程です。"},
+  {t:"職場の制度を調べてみて分かったこと", u:"workingdiary.example/checking-workplace-support", s:"休暇制度や相談窓口の有無を確認した際に、実際に問い合わせて分かった内容をまとめました。"},
+  {t:"不妊治療中の体調記録アプリを比べてみた", u:"lifestepnotes.example/comparing-tracking-apps", s:"いくつかのアプリを試し、記録のしやすさや見返しやすさという観点で感じた違いについて。"},
+  {t:"友人からの何気ない一言に救われた話", u:"familyclinic.example/a-friends-words", s:"当時つらかった時期に、意図せずかけられた言葉がどう気持ちを軽くしてくれたかの記録です。"},
+  {t:"不妊治療、セカンドオピニオンを受けた理由", u:"familyclinic.example/getting-a-second-opinion", s:"別の医師の見解を聞いてみようと思い立った経緯と、実際に受けてみて感じたことについて。"},
+  {t:"通院を続けながら趣味を保つ工夫", u:"lifestepnotes.example/keeping-a-hobby-alive", s:"治療中心の生活になりがちな時期でも、続けてよかったと思う小さな習慣について書いています。"},
+  {t:"不妊治療にまつわる情報との距離の取り方", u:"lifestepnotes.example/distance-from-information", s:"調べすぎて疲れてしまった経験から、情報とどう付き合うようにしたかを振り返る内容です。"},
+  {t:"義理の両親との関わり方で悩んだこと", u:"workingdiary.example/in-laws-and-boundaries", s:"聞かれたくないことを聞かれたときに、どう距離を置くようにしていたかについての記録。"}
+];
+
+const home = document.getElementById('home');
+const resultsPage = document.getElementById('results-page');
+const homeForm = document.getElementById('homeForm');
+const homeInput = document.getElementById('homeInput');
+const resultsForm = document.getElementById('resultsForm');
+const resultsInput = document.getElementById('resultsInput');
+const luckyBtn = document.getElementById('luckyBtn');
+const stats = document.getElementById('stats');
+const resultList = document.getElementById('resultList');
+
+function highlight(text, q){
+  if(!q) return text;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if(idx === -1) return text;
+  return text.slice(0,idx) + '<mark>' + text.slice(idx, idx+q.length) + '</mark>' + text.slice(idx+q.length);
+}
+
+function runSearch(query){
+  const q = query.trim();
+  home.style.display = 'none';
+  resultsPage.style.display = 'block';
+  resultsInput.value = q;
+
+  const matches = q
+    ? DATA.filter(d => (d.t + d.s).toLowerCase().includes(q.toLowerCase()))
+    : DATA;
+
+  stats.textContent = `約 ${matches.length} 件 (0.${20 + (q.length*7)%60} 秒)`;
+
+  if(matches.length === 0){
+    resultList.innerHTML = `
+      <div class="empty">
+        <b>「${q}」に一致する情報は見つかりませんでした。</b>
+        <ul>
+          <li>キーワードのスペルを確認してください</li>
+          <li>別のキーワードを試してください</li>
+          <li>より一般的な言葉で検索してください</li>
+        </ul>
+      </div>`;
+    return;
+  }
+
+  resultList.innerHTML = matches.map(d => `
+    <div class="result">
+      <div class="url">${d.u}</div>
+      <a href="https://${d.u}" class="r-title" target="_blank" rel="noopener">${highlight(d.t, q)}</a>
+      <div class="snippet">${highlight(d.s, q)}</div>
+    </div>
+  `).join('');
+}
+
+homeForm.addEventListener('submit', e => {
+  e.preventDefault();
+  runSearch(homeInput.value);
+});
+resultsForm.addEventListener('submit', e => {
+  e.preventDefault();
+  runSearch(resultsInput.value);
+});
+resultsInput.addEventListener('input', () => runSearch(resultsInput.value));
+luckyBtn.addEventListener('click', () => {
+  const pick = DATA[Math.floor(Math.random()*DATA.length)];
+  runSearch(pick.t);
+});
+
+runSearch('不妊治療');
+</script>
+</body>
+</html>
